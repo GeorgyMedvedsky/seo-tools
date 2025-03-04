@@ -12,12 +12,17 @@ function getElement(selector) {
   return selector ? document.querySelector(selector) : null;
 }
 
-function setShielding(ex) {
-  return ex.replace(/([.*+?^${}()|[\]\\])/g, '\\$1').replace([/ /g, '\\+']);
+function setShielding(str) {
+  return str.replace(/([.*+?^${}()|])/g, '\\$1');
+}
+
+function hasUpperCase(str) {
+  const regex = /[A-Z]/;
+  return regex.test(str);
 }
 
 function generateNginxRedirects(urls, targetUrl) {
-  const targetUrlLine = `set $target_url_ ${targetUrl};\n\n`;
+  const targetUrlLine = `set $target_url_ ${targetUrl.trim()};\n\n`;
   const groupedRedirects = {};
   const existingRedirects = new Set();
   let queryRedirects = '';
@@ -25,37 +30,36 @@ function generateNginxRedirects(urls, targetUrl) {
 
   urls.forEach((url) => {
     const parsedUrl = new URL(url);
-    const tempPath = parsedUrl.pathname.replace(/%20/g, '__SPACE__');
-    const path = decodeURIComponent(tempPath);
-    const finalPath = path.replace(/__SPACE__/g, '%20');
+    const path = decodeURIComponent(parsedUrl.pathname).replaceAll(' ',  '\\s');
     const params = parsedUrl.searchParams;
+
     if ([...params.keys()].length > 0) {
       let redirectConditionAdded = false;
       for (const [key, value] of params) {
-        const redirectCondition = `if ($args ~* "^${setShielding(finalPath)}\?${key}=${setShielding(value)}$") {\n    return 301 ${targetUrl};\n}\n`;
-          if (!existingRedirects.has(redirectCondition)) {
-              queryRedirects += redirectCondition;
-              existingRedirects.add(redirectCondition);
-              redirectConditionAdded = true;
-          }
+        const redirectCondition = `if ($args ~* "^${setShielding(key.toString())}(.*)$") {\n    return 301 $target_url_;\n}\n`;
+        if (!existingRedirects.has(redirectCondition)) {
+          queryRedirects += redirectCondition;
+          existingRedirects.add(redirectCondition);
+          redirectConditionAdded = true;
+        }
       }
       if (redirectConditionAdded) return;
     } else {
       groupedRedirects[path] = [];
       groupedRedirects[path].push(path);
       redirects = Object.keys(groupedRedirects).map((path) => {
-        return `rewrite ^${setShielding(finalPath)}$ $target_url_ permanent;`;
+        return `rewrite (?i)^${setShielding(path)}(.*)$ $target_url_ permanent;`;
       });
     }
   });
 
-  if(redirects && queryRedirects) {
-    return targetUrlLine + queryRedirects + '\n\n' + redirects.join('\n') + '\n'
-  } else if(redirects && !queryRedirects) {
-    return targetUrlLine + redirects.join('\n') + '\n'
-  } else if(!redirects && queryRedirects) {
+  if (redirects && queryRedirects) {
+    return targetUrlLine + queryRedirects + '\n' + redirects.join('\n') + '\n';
+  } else if (redirects && !queryRedirects) {
+    return targetUrlLine + redirects.join('\n') + '\n';
+  } else if (!redirects && queryRedirects) {
     return targetUrlLine + queryRedirects;
-  } else return
+  } else return '';
 }
 
 generateButton.addEventListener("pointerup", () => {
