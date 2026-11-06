@@ -1,6 +1,8 @@
-# redirector-nginx
+# seo-tools
 
 Генератор redirect-конфигов для nginx/Apache — первый инструмент будущей единой SEO-платформы.
+
+[https://georgymedvedsky.github.io/seo-tools/](https://georgymedvedsky.github.io/seo-tools/)
 
 ## Стек
 

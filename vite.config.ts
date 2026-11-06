@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/seo-tools/' : '/',
   plugins: [react()],
   resolve: {
     tsconfigPaths: true,
@@ -22,4 +23,4 @@ export default defineConfig({
       exclude: ['src/**/index.ts', 'src/app/router/**'],
     },
   },
-});
+}));
