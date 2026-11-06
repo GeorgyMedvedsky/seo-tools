@@ -28,6 +28,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run format:check
       - uses: editorconfig-checker/action-editorconfig-checker@v2
+        with:
+          version: v3.8.0
       - run: editorconfig-checker
       - run: npm run typecheck
       - run: npm run lint
