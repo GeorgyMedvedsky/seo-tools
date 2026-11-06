@@ -1,0 +1,19 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.link {
+  display: inline-block;
+  margin-top: tokens.spacing(8);
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-medium;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+
+  @include tokens.transition(color);
+
+  @include hover-supported {
+    &:hover {
+      color: var(--color-accent);
+    }
+  }
+}

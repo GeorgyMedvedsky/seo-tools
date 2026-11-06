@@ -1,0 +1,72 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: tokens.z('header');
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: tokens.spacing(3) tokens.spacing(5);
+  background: var(--color-bg-canvas);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logo {
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-bold;
+  color: var(--color-text-primary);
+  text-decoration: none;
+
+  @include tokens.type('lg');
+  @include tokens.transition(color);
+
+  @include hover-supported {
+    &:hover {
+      color: var(--color-accent);
+    }
+  }
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: tokens.spacing(2);
+}
+
+.themeToggle {
+  @include icon-button-reset;
+
+  width: 36px;
+  height: 36px;
+  border-radius: tokens.radius('md');
+  color: var(--color-text-secondary);
+
+  @include hover-supported {
+    &:hover {
+      background: var(--color-bg-surface);
+      color: var(--color-text-primary);
+    }
+  }
+}
+
+.languageToggle {
+  @include icon-button-reset;
+
+  min-width: 36px;
+  height: 36px;
+  padding: 0 tokens.spacing(2);
+  border-radius: tokens.radius('md');
+  color: var(--color-text-secondary);
+  font-weight: tokens.$font-weight-semibold;
+
+  @include tokens.type('xs');
+
+  @include hover-supported {
+    &:hover {
+      background: var(--color-bg-surface);
+      color: var(--color-text-primary);
+    }
+  }
+}

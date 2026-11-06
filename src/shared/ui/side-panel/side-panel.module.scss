@@ -1,0 +1,45 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.panel {
+  @include surface('raised');
+  @include tokens.transition(transform);
+
+  position: fixed;
+  top: 64px;
+  right: 0;
+  z-index: tokens.z('side-panel');
+  width: min(360px, 90vw);
+  padding: tokens.spacing(6) tokens.spacing(4);
+  transform: translateX(100%);
+  color: inherit;
+}
+
+.open {
+  transform: translateX(0);
+}
+
+.content {
+  max-height: calc(100vh - 64px - #{tokens.spacing(8)});
+}
+
+.bookmark {
+  @include icon-button-reset;
+  @include interactive-glow;
+
+  position: absolute;
+  top: 50%;
+  left: -44px;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 64px;
+  border-top-left-radius: tokens.radius('md');
+  border-bottom-left-radius: tokens.radius('md');
+  color: var(--color-on-accent);
+}
+
+@include tokens.respond-to('md') {
+  .panel {
+    padding: tokens.spacing(4);
+  }
+}

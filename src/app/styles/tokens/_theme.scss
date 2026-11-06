@@ -1,0 +1,39 @@
+@use 'primitives' as p;
+
+:root {
+  --color-bg-canvas: #{p.$black};
+  --color-bg-surface: #{p.$gray-900};
+  --color-bg-surface-raised: #{p.$gray-800};
+  --color-border: #{p.$gray-700};
+  --color-border-strong: #{p.$gray-600};
+  --color-text-primary: #{p.$gray-100};
+  --color-text-secondary: #{p.$gray-400};
+  --color-text-muted: #{p.$gray-500};
+  --color-accent: #{p.$blue-500};
+  --color-accent-hover: #{p.$blue-600};
+  --color-on-accent: #{p.$white};
+  --color-success: #{p.$green-500};
+  --color-warning: #{p.$amber-500};
+  --color-danger: #{p.$red-500};
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+[data-theme='light'] {
+  --color-bg-canvas: #{p.$white};
+  --color-bg-surface: #{p.$gray-50};
+  --color-bg-surface-raised: #{p.$white};
+  --color-border: #{p.$gray-200};
+  --color-border-strong: #{p.$gray-300};
+  --color-text-primary: #{p.$ink};
+  --color-text-secondary: #{p.$gray-600};
+  --color-text-muted: #{p.$gray-500};
+  --color-accent: #{p.$blue-600};
+  --color-accent-hover: #{p.$blue-700};
+  --color-on-accent: #{p.$white};
+  --color-success: #{p.$green-600};
+  --color-warning: #{p.$amber-600};
+  --color-danger: #{p.$red-600};
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 6%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 10%);
+}

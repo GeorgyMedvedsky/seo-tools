@@ -1,0 +1,11 @@
+@use 'sass:map';
+
+$z-index: (
+  side-panel: 20,
+  header: 25,
+  notice: 30,
+);
+
+@function z($key) {
+  @return map.get($z-index, $key);
+}

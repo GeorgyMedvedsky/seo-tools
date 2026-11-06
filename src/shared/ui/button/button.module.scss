@@ -1,0 +1,64 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: tokens.spacing(2);
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-medium;
+  padding: tokens.spacing(2) tokens.spacing(4);
+  border: 1px solid transparent;
+  border-radius: tokens.radius('md');
+  cursor: pointer;
+
+  @include tokens.type('sm');
+  @include tokens.transition(background-color, border-color, color, box-shadow, transform);
+
+  @include hover-supported {
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.primary {
+  @include interactive-glow;
+
+  color: var(--color-on-accent);
+}
+
+.secondary {
+  background-color: var(--color-bg-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+
+  @include hover-supported {
+    &:hover {
+      background-color: var(--color-bg-surface-raised);
+      border-color: var(--color-border-strong);
+    }
+  }
+}
+
+.ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+
+  @include hover-supported {
+    &:hover {
+      background-color: var(--color-bg-surface);
+      color: var(--color-text-primary);
+    }
+  }
+}

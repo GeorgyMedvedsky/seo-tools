@@ -1,0 +1,78 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.spacing(5);
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+.title {
+  @include underline;
+
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-bold;
+  color: var(--color-text-primary);
+  margin: 0;
+
+  @include tokens.type('xxl');
+}
+
+.titleAccent {
+  color: var(--color-accent);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.spacing(3);
+
+  > * {
+    flex: 1 1 200px;
+  }
+}
+
+.notification {
+  font-family: tokens.$font-sans;
+  color: var(--color-success);
+  min-height: 1.2em;
+
+  @include tokens.type('sm');
+}
+
+.error {
+  font-family: tokens.$font-sans;
+  color: var(--color-danger);
+  margin: 0;
+
+  @include tokens.type('sm');
+}
+
+.notices {
+  position: fixed;
+  bottom: tokens.spacing(6);
+  right: tokens.spacing(6);
+  z-index: tokens.z('notice');
+  display: flex;
+  flex-direction: column;
+  gap: tokens.spacing(3);
+  align-items: flex-end;
+  max-width: min(420px, calc(100vw - #{tokens.spacing(6)} * 2));
+}
+
+@include tokens.respond-to('md') {
+  .buttons > * {
+    flex: 1 1 40px;
+  }
+
+  .notices {
+    right: tokens.spacing(3);
+    left: tokens.spacing(3);
+    bottom: tokens.spacing(3);
+    align-items: stretch;
+    max-width: none;
+  }
+}

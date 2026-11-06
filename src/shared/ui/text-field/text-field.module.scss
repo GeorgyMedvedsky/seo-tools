@@ -1,0 +1,22 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.spacing(2);
+}
+
+.label {
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-medium;
+  color: var(--color-text-secondary);
+
+  @include tokens.type('sm');
+}
+
+.input {
+  @include field;
+
+  font-family: tokens.$font-sans;
+}

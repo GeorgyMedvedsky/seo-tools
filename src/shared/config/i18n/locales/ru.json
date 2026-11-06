@@ -1,0 +1,60 @@
+{
+  "appHeader": {
+    "logo": "SEO Tools",
+    "switchToLightTheme": "Переключить на светлую тему",
+    "switchToDarkTheme": "Переключить на тёмную тему",
+    "switchToEnglish": "Переключить на английский",
+    "switchToRussian": "Переключить на русский"
+  },
+  "dashboardPage": {
+    "title": "SEO Tools",
+    "subtitle": "Растущая коллекция инструментов для SEO-работы.",
+    "redirectGeneratorCard": {
+      "title": "Генератор редиректов",
+      "description": "Генерирует правила редиректов nginx/Apache из списка URL."
+    }
+  },
+  "notFoundPage": {
+    "title": "Страница не найдена",
+    "subtitle": "Страница, которую вы ищете, не существует.",
+    "backToDashboard": "Назад на дашборд"
+  },
+  "errorBoundaryPage": {
+    "title": "Что-то пошло не так",
+    "defaultMessage": "Произошла непредвиденная ошибка.",
+    "backToDashboard": "Назад на дашборд"
+  },
+  "redirectGeneratorPage": {
+    "toggleSettingsPanel": "Открыть/закрыть панель настроек"
+  },
+  "redirectGeneratorForm": {
+    "title": "Генератор Редиректов",
+    "inputUrlsLabel": "Введите адреса, по одному на строку",
+    "inputUrlsPlaceholder": "Введите адреса, по одному на строку...",
+    "targetUrlLabel": "Введите целевой URL:",
+    "generate": "Сгенерировать редиректы",
+    "copy": "Скопировать",
+    "download": "Скачать redirects.conf",
+    "reset": "Сбросить всё",
+    "resultLabel": "Результат:",
+    "nothingToRedirect": "Нечего редиректить: список URL пуст или все URL были отфильтрованы",
+    "targetUrlErrors": {
+      "required": "Введите целевой URL",
+      "invalid": "Целевой URL недействителен"
+    },
+    "subdomainsNoticeTitle": "Список URL содержит поддомены:",
+    "closeWarning": "Закрыть предупреждение",
+    "unparseableNoticeTitle": "Невозможно обработать следующие URL:",
+    "closeError": "Закрыть ошибку"
+  },
+  "generateRedirects": {
+    "copied": "Скопировано!",
+    "copyFailed": "Не удалось скопировать"
+  },
+  "generatorSettings": {
+    "templateLabel": "Выберите шаблон:",
+    "groupLabel": "Группировать",
+    "groupTitle": "Группировка выполняется по первому сегменту пути",
+    "checkRedirectList": "Проверить список редиректов"
+  }
+}

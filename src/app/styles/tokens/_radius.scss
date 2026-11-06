@@ -1,0 +1,12 @@
+@use 'sass:map';
+
+$radius: (
+  sm: 6px,
+  md: 8px,
+  lg: 12px,
+  full: 999px,
+);
+
+@function radius($key) {
+  @return map.get($radius, $key);
+}

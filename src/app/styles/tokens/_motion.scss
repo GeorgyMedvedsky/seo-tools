@@ -1,0 +1,15 @@
+@use 'sass:list';
+
+$duration-base: 180ms;
+$duration-slow: 280ms;
+$easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+@mixin transition($properties...) {
+  $list: ();
+
+  @each $property in $properties {
+    $list: list.append($list, #{$property} $duration-base $easing-standard, comma);
+  }
+
+  transition: $list;
+}

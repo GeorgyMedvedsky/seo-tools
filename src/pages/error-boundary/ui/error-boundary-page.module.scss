@@ -1,0 +1,52 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.main {
+  flex: 1;
+  padding: clamp(20px, -40px + 7.8125vw, 40px) clamp(20px, -16px + 4.6875vw, 32px);
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.title {
+  @include underline;
+
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-bold;
+  color: var(--color-text-primary);
+  margin: 0;
+
+  @include tokens.type('xxl');
+}
+
+.subtitle {
+  font-family: tokens.$font-mono;
+  color: var(--color-text-secondary);
+  margin-top: tokens.spacing(3);
+
+  @include tokens.type('sm');
+}
+
+.link {
+  display: inline-block;
+  margin-top: tokens.spacing(8);
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-medium;
+  color: var(--color-accent);
+  text-decoration: none;
+
+  @include tokens.transition(color);
+
+  @include hover-supported {
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

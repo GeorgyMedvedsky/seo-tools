@@ -1,0 +1,60 @@
+{
+  "appHeader": {
+    "logo": "SEO Tools",
+    "switchToLightTheme": "Switch to light theme",
+    "switchToDarkTheme": "Switch to dark theme",
+    "switchToEnglish": "Switch to English",
+    "switchToRussian": "Switch to Russian"
+  },
+  "dashboardPage": {
+    "title": "SEO Tools",
+    "subtitle": "A growing collection of tools for SEO work.",
+    "redirectGeneratorCard": {
+      "title": "Redirect Generator",
+      "description": "Generate nginx/Apache redirect rules from a list of URLs."
+    }
+  },
+  "notFoundPage": {
+    "title": "Page not found",
+    "subtitle": "The page you are looking for does not exist.",
+    "backToDashboard": "Back to dashboard"
+  },
+  "errorBoundaryPage": {
+    "title": "Something went wrong",
+    "defaultMessage": "An unexpected error occurred.",
+    "backToDashboard": "Back to dashboard"
+  },
+  "redirectGeneratorPage": {
+    "toggleSettingsPanel": "Toggle settings panel"
+  },
+  "redirectGeneratorForm": {
+    "title": "Redirects Generator",
+    "inputUrlsLabel": "Enter addresses, one per line",
+    "inputUrlsPlaceholder": "Enter addresses, one per line...",
+    "targetUrlLabel": "Enter the target URL:",
+    "generate": "Generate redirects",
+    "copy": "Copy",
+    "download": "Download redirects.conf",
+    "reset": "Reset all",
+    "resultLabel": "Result:",
+    "nothingToRedirect": "Nothing to redirect: the URL list is empty or every URL was filtered out",
+    "targetUrlErrors": {
+      "required": "Please enter the target url",
+      "invalid": "The target url is not valid"
+    },
+    "subdomainsNoticeTitle": "The list of URLs contains subdomains:",
+    "closeWarning": "Close warning",
+    "unparseableNoticeTitle": "It is not possible to process the following URLs:",
+    "closeError": "Close error"
+  },
+  "generateRedirects": {
+    "copied": "Copied!",
+    "copyFailed": "Copy failed"
+  },
+  "generatorSettings": {
+    "templateLabel": "Select a template:",
+    "groupLabel": "Group",
+    "groupTitle": "Grouping is done by the first path segment",
+    "checkRedirectList": "Check redirect list"
+  }
+}

@@ -1,0 +1,25 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.row {
+  @include label-row;
+
+  margin-top: tokens.spacing(3);
+}
+
+.text {
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+
+  &:focus-visible {
+    @include focus-ring;
+
+    border-radius: tokens.radius('sm');
+  }
+}

@@ -1,0 +1,95 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.panel {
+  @include surface('raised');
+  @include tokens.transition(transform, opacity, max-height);
+
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: 0;
+  opacity: 0;
+  transform: translateX(16px);
+  overflow: hidden;
+  color: var(--color-text-primary);
+  border-left-width: 3px;
+  pointer-events: none;
+}
+
+.open {
+  max-height: 70vh;
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.error {
+  border-left-color: var(--color-danger);
+}
+
+.warning {
+  border-left-color: var(--color-warning);
+}
+
+.close {
+  @include icon-button-reset;
+
+  position: absolute;
+  top: tokens.spacing(2);
+  right: tokens.spacing(2);
+  width: 24px;
+  height: 24px;
+  border-radius: tokens.radius('sm');
+  color: var(--color-text-secondary);
+
+  @include hover-supported {
+    &:hover {
+      background: var(--color-bg-surface);
+      color: var(--color-text-primary);
+    }
+  }
+}
+
+.content {
+  padding: tokens.spacing(5);
+  padding-right: tokens.spacing(8);
+  overflow: auto;
+  max-height: 70vh;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: tokens.spacing(2);
+  margin: 0 0 tokens.spacing(2);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.error .icon {
+  color: var(--color-danger);
+}
+
+.warning .icon {
+  color: var(--color-warning);
+}
+
+.title {
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-semibold;
+  margin: 0;
+
+  @include tokens.type('sm');
+}
+
+.item {
+  overflow-wrap: break-word;
+  font-family: tokens.$font-mono;
+  margin: 0 0 tokens.spacing(1);
+  color: var(--color-text-secondary);
+
+  @include tokens.type('xs');
+}

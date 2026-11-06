@@ -1,0 +1,35 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  gap: tokens.spacing(2);
+}
+
+.label {
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-semibold;
+  color: var(--color-text-secondary);
+  margin: 0;
+
+  @include tokens.type('sm');
+}
+
+.container {
+  flex: 1;
+  min-height: clamp(140px, 24vh, 280px);
+  overflow: auto;
+}
+
+.output {
+  @include field;
+
+  font-family: tokens.$font-mono;
+  margin: 0;
+  white-space: pre-wrap;
+  height: 100%;
+  overflow: auto;
+}

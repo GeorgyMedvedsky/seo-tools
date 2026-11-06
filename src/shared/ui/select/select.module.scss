@@ -1,0 +1,31 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.label {
+  @include label-row;
+
+  margin-top: tokens.spacing(3);
+}
+
+.select {
+  font-family: tokens.$font-sans;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: tokens.radius('sm');
+  padding: tokens.spacing(1) tokens.spacing(2);
+  cursor: pointer;
+
+  @include tokens.type('sm');
+  @include tokens.transition(border-color, box-shadow);
+
+  @include hover-supported {
+    &:hover {
+      border-color: var(--color-border-strong);
+    }
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
