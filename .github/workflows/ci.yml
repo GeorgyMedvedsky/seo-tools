@@ -26,7 +26,16 @@ jobs:
       - run: npm ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: npm run verify
+      - run: npm run format:check
+      - uses: editorconfig-checker/action-editorconfig-checker@v2
+      - run: editorconfig-checker
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run lint:styles
+      - run: npm run lint:html
+      - run: npm run lint:md
+      - run: npm run lint:fsd
+      - run: npm run test
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
