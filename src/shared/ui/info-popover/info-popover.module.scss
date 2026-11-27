@@ -1,0 +1,56 @@
+@use 'app/styles/mixins' as *;
+@use 'app/styles/tokens' as tokens;
+
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  @include icon-button-reset;
+
+  width: 24px;
+  height: 24px;
+  border-radius: tokens.radius('sm');
+  color: var(--color-text-secondary);
+
+  @include hover-supported {
+    &:hover {
+      background: var(--color-bg-surface);
+      color: var(--color-text-primary);
+    }
+  }
+}
+
+.popover {
+  @include surface('raised');
+  @include tokens.transition(opacity, transform);
+
+  position: absolute;
+  top: calc(100% + #{tokens.spacing(2)});
+  left: 0;
+  z-index: tokens.z('side-panel');
+  width: max(280px, 100%);
+  max-width: min(360px, 90vw);
+  padding: tokens.spacing(4);
+  color: var(--color-text-primary);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+
+  @include tokens.type('sm');
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}

@@ -11,15 +11,20 @@ export type GeneratorState = {
   pairsInput: string;
   template: RedirectTemplate;
   grouped: boolean;
+  merge: boolean;
   output: string;
   subdomains: string[];
   unparseableUrls: string[];
   conflictingSources: string[];
+  redirectCycles: string[];
+  collapsedChains: string[];
   targetUrlError: TargetUrlError | null;
   nothingToRedirect: boolean;
   warningPanelOpen: boolean;
   errorPanelOpen: boolean;
   conflictPanelOpen: boolean;
+  cyclePanelOpen: boolean;
+  chainsPanelOpen: boolean;
 };
 
 export type GeneratorAction =
@@ -29,8 +34,11 @@ export type GeneratorAction =
   | { type: 'pairsInput/change'; payload: string }
   | { type: 'template/change'; payload: RedirectTemplate }
   | { type: 'grouped/change'; payload: boolean }
+  | { type: 'merge/change'; payload: boolean }
   | { type: 'generate' }
   | { type: 'warningPanel/close' }
   | { type: 'errorPanel/close' }
   | { type: 'conflictPanel/close' }
+  | { type: 'cyclePanel/close' }
+  | { type: 'chainsPanel/close' }
   | { type: 'reset' };

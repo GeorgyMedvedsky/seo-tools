@@ -3,15 +3,18 @@ import { EXCLUDED_PATHS } from '../config/excluded-paths';
 import type { GenerateRedirectsParams, GenerateRedirectsResult } from '../model/types';
 import {
   apacheRedirectMatch,
+  exactPathPattern,
   formatPathForRegex,
   hasUnsafeConfigCharacters,
-  patternForPaths,
+  normalizeHost,
+  normalizePath,
+  patternsForMerge,
   safeDecodeURIComponent,
   targetHasOwnQuery,
 } from './path-format';
 
 function pathFragment(rawPath: string, isGrouped: boolean): string {
-  return `${formatPathForRegex(rawPath)}${isGrouped ? '/(.*)' : ''}`;
+  return isGrouped ? `${formatPathForRegex(rawPath)}/(.*)` : exactPathPattern(rawPath);
 }
 
 function nginxLocationBlock(pattern: string): string {
@@ -48,15 +51,12 @@ function isValueUnreliablyEncoded(url: URL, key: string, decodedValue: string): 
   return rawValue !== undefined && rawValue !== decodedValue;
 }
 
-function normalizeHost(hostname: string): string {
-  return hostname.startsWith('www.') ? hostname.slice(4) : hostname;
-}
-
 export function generateRedirects({
   urls,
   targetUrl,
   template,
   grouped,
+  merge,
 }: GenerateRedirectsParams): GenerateRedirectsResult {
   const trimmedTargetUrl = targetUrl.trim();
 
@@ -77,7 +77,7 @@ export function generateRedirects({
   const existingQueryConditions = new Set<string>();
   let queryRedirects = '';
 
-  const canonicalPath = safeDecodeURIComponent(canonical.pathname);
+  const canonicalPath = normalizePath(safeDecodeURIComponent(canonical.pathname));
 
   for (const rawUrl of urls) {
     const url = rawUrl.trim();
@@ -121,7 +121,7 @@ export function generateRedirects({
       continue;
     }
 
-    const rawPath = safeDecodeURIComponent(parsedUrl.pathname);
+    const rawPath = normalizePath(safeDecodeURIComponent(parsedUrl.pathname));
     if (hasUnsafeConfigCharacters(rawPath)) {
       unparseableUrls.push(url);
       continue;
@@ -134,13 +134,22 @@ export function generateRedirects({
   }
 
   const paths = [...groupedRedirects];
-  const pattern = () => patternForPaths(paths.map((path) => pathFragment(path, grouped)));
+  const pathPatterns = () =>
+    patternsForMerge(
+      paths.map((path) => pathFragment(path, grouped)),
+      merge,
+    );
 
   let output: string;
   let hasConditions: boolean;
 
   if (template === 'nginx') {
-    const pathBlock = paths.length > 0 ? nginxLocationBlock(pattern()) : '';
+    const pathBlock =
+      paths.length > 0
+        ? pathPatterns()
+            .map((pattern) => nginxLocationBlock(pattern))
+            .join('\n')
+        : '';
     hasConditions = queryRedirects !== '' || pathBlock !== '';
     output = `set $target_url_ ${trimmedTargetUrl};\n\n${queryRedirects}${pathBlock}`;
   } else if (targetHasOwnQuery(trimmedTargetUrl)) {
@@ -155,7 +164,12 @@ export function generateRedirects({
     const queryBlock = queryRedirects
       ? `${queryRedirects}RewriteRule ^(.*)$ ${trimmedTargetUrl} [R=301,L,QSD]\n\n`
       : '';
-    const pathBlock = paths.length > 0 ? apacheRedirectMatch(pattern(), trimmedTargetUrl) : '';
+    const pathBlock =
+      paths.length > 0
+        ? pathPatterns()
+            .map((pattern) => apacheRedirectMatch(pattern, trimmedTargetUrl))
+            .join('\n')
+        : '';
     hasConditions = queryBlock !== '' || pathBlock !== '';
     output = `${queryBlock}${pathBlock}`;
   }

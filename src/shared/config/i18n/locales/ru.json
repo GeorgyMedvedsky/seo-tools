@@ -12,6 +12,10 @@
     "redirectGeneratorCard": {
       "title": "Генератор редиректов",
       "description": "Генерирует правила редиректов nginx/Apache из списка URL."
+    },
+    "comingSoon": {
+      "title": "Скоро — новые инструменты",
+      "description": "По мере роста коллекции здесь появятся новые SEO-инструменты."
     }
   },
   "notFoundPage": {
@@ -31,12 +35,24 @@
     "title": "Генератор Редиректов",
     "inputUrlsLabel": "Введите адреса, по одному на строку",
     "inputUrlsPlaceholder": "Введите адреса, по одному на строку...",
+    "uploadFile": "Загрузить файл",
     "targetUrlLabel": "Введите целевой URL:",
     "generate": "Сгенерировать редиректы",
     "copy": "Скопировать",
-    "download": "Скачать redirects.conf",
+    "download": "Скачать {{filename}}",
     "reset": "Сбросить всё",
     "resultLabel": "Результат:",
+    "outputHelp": {
+      "triggerLabel": "Как использовать этот файл",
+      "nginx": {
+        "intro": "Подключите этот файл внутри нужного server-блока конфига nginx:",
+        "snippet": "include /path/to/{{filename}};"
+      },
+      "apache": {
+        "intro": "Поместите этот файл как {{filename}} в корень документов сайта — Apache подхватит его автоматически.",
+        "note": "Убедитесь, что AllowOverride не выставлен в None для нужных директив в основном конфиге."
+      }
+    },
     "nothingToRedirect": "Нечего редиректить: список URL пуст или все URL были отфильтрованы",
     "targetUrlErrors": {
       "required": "Введите целевой URL",
@@ -49,11 +65,16 @@
     "inputPairsLabel": "Введите пары адресов источник-цель, по одной паре на строку",
     "inputPairsPlaceholder": "https://old-site.com/page https://new-site.com/page",
     "conflictingSourcesNoticeTitle": "Эти исходные URL указаны с разными целями:",
-    "closeConflict": "Закрыть конфликт"
+    "closeConflict": "Закрыть конфликт",
+    "redirectCyclesNoticeTitle": "Эти исходные URL образуют цикл редиректов и были исключены:",
+    "closeCycle": "Закрыть уведомление о цикле",
+    "collapsedChainsNoticeTitle": "Эти редиректы вели на другой редирект из списка; промежуточный переход пропущен:",
+    "closeChains": "Закрыть уведомление о цепочках"
   },
   "generateRedirects": {
     "copied": "Скопировано!",
-    "copyFailed": "Не удалось скопировать"
+    "copyFailed": "Не удалось скопировать",
+    "uploadFailed": "Не удалось прочитать файл"
   },
   "generatorSettings": {
     "modeLabel": "Режим редиректа:",
@@ -62,6 +83,8 @@
     "templateLabel": "Выберите шаблон:",
     "groupLabel": "Группировать",
     "groupTitle": "Группировка выполняется по первому сегменту пути",
+    "mergeLabel": "Объединять правила с одинаковой целью",
+    "mergeTitle": "Если включено, правила с одинаковым target объединяются в одно вместо одного на каждый путь",
     "checkRedirectList": "Проверить список редиректов"
   }
 }

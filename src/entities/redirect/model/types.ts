@@ -5,6 +5,7 @@ export type GenerateRedirectsParams = {
   targetUrl: string;
   template: RedirectTemplate;
   grouped: boolean;
+  merge: boolean;
 };
 
 export type GenerateRedirectsResult =

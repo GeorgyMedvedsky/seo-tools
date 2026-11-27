@@ -40,3 +40,38 @@
   gap: tokens.spacing(5);
   margin-top: tokens.spacing(8);
 }
+
+.comingSoon {
+  padding: tokens.spacing(5);
+  border: 1px dashed var(--color-border);
+  border-radius: tokens.radius('lg');
+  color: var(--color-text-secondary);
+}
+
+.comingSoonIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: tokens.spacing(4);
+  border-radius: tokens.radius('md');
+  background: var(--color-bg-canvas);
+  color: var(--color-text-secondary);
+}
+
+.comingSoonTitle {
+  font-family: tokens.$font-sans;
+  font-weight: tokens.$font-weight-semibold;
+  color: var(--color-text-secondary);
+  margin: 0 0 tokens.spacing(2);
+
+  @include tokens.type('lg');
+}
+
+.comingSoonDescription {
+  margin: 0;
+  font-family: tokens.$font-sans;
+
+  @include tokens.type('sm');
+}

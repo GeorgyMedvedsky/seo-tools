@@ -31,7 +31,7 @@ export function GeneratorSettings({ generator }: GeneratorSettingsProps) {
         label={t('generatorSettings.modeLabel')}
         options={modeOptions}
         value={state.mode}
-        onChange={(event) => actions.setMode(event.target.value as GeneratorMode)}
+        onChange={(value) => actions.setMode(value as GeneratorMode)}
       />
 
       <Select
@@ -39,7 +39,7 @@ export function GeneratorSettings({ generator }: GeneratorSettingsProps) {
         label={t('generatorSettings.templateLabel')}
         options={TEMPLATE_OPTIONS}
         value={state.template}
-        onChange={(event) => actions.setTemplate(event.target.value as RedirectTemplate)}
+        onChange={(value) => actions.setTemplate(value as RedirectTemplate)}
       />
 
       {state.mode === 'single' && (
@@ -51,6 +51,14 @@ export function GeneratorSettings({ generator }: GeneratorSettingsProps) {
           onChange={(event) => actions.setGrouped(event.target.checked)}
         />
       )}
+
+      <Checkbox
+        id="merge"
+        label={t('generatorSettings.mergeLabel')}
+        title={t('generatorSettings.mergeTitle')}
+        checked={state.merge}
+        onChange={(event) => actions.setMerge(event.target.checked)}
+      />
 
       <ExternalLink href="https://coolakov.ru/tools/ping/">
         {t('generatorSettings.checkRedirectList')}

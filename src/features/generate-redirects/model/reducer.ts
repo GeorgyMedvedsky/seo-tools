@@ -8,15 +8,20 @@ export const initialState: GeneratorState = {
   pairsInput: '',
   template: 'nginx',
   grouped: false,
+  merge: true,
   output: '',
   subdomains: [],
   unparseableUrls: [],
   conflictingSources: [],
+  redirectCycles: [],
+  collapsedChains: [],
   targetUrlError: null,
   nothingToRedirect: false,
   warningPanelOpen: false,
   errorPanelOpen: false,
   conflictPanelOpen: false,
+  cyclePanelOpen: false,
+  chainsPanelOpen: false,
 };
 
 function withClearedResult(state: GeneratorState): GeneratorState {
@@ -26,10 +31,14 @@ function withClearedResult(state: GeneratorState): GeneratorState {
     subdomains: [],
     unparseableUrls: [],
     conflictingSources: [],
+    redirectCycles: [],
+    collapsedChains: [],
     nothingToRedirect: false,
     warningPanelOpen: false,
     errorPanelOpen: false,
     conflictPanelOpen: false,
+    cyclePanelOpen: false,
+    chainsPanelOpen: false,
   };
 }
 
@@ -44,6 +53,7 @@ function generateSingle(state: GeneratorState): GeneratorState {
     targetUrl: trimmedTargetUrl,
     template: state.template,
     grouped: state.grouped,
+    merge: state.merge,
   });
 
   if (!result.ok) {
@@ -57,10 +67,14 @@ function generateSingle(state: GeneratorState): GeneratorState {
     subdomains: result.subdomains,
     unparseableUrls: result.unparseableUrls,
     conflictingSources: [],
+    redirectCycles: [],
+    collapsedChains: [],
     nothingToRedirect: !result.hasRedirects,
     warningPanelOpen: result.subdomains.length > 0,
     errorPanelOpen: result.unparseableUrls.length > 0,
     conflictPanelOpen: false,
+    cyclePanelOpen: false,
+    chainsPanelOpen: false,
   };
 }
 
@@ -68,6 +82,7 @@ function generatePairs(state: GeneratorState): GeneratorState {
   const result = generateRedirectPairs({
     lines: state.pairsInput.split('\n'),
     template: state.template,
+    merge: state.merge,
   });
 
   return {
@@ -77,10 +92,14 @@ function generatePairs(state: GeneratorState): GeneratorState {
     subdomains: [],
     unparseableUrls: result.unparseableLines,
     conflictingSources: result.conflictingSources,
+    redirectCycles: result.redirectCycles,
+    collapsedChains: result.collapsedChains,
     nothingToRedirect: !result.hasRedirects,
     warningPanelOpen: false,
     errorPanelOpen: result.unparseableLines.length > 0,
     conflictPanelOpen: result.conflictingSources.length > 0,
+    cyclePanelOpen: result.redirectCycles.length > 0,
+    chainsPanelOpen: result.collapsedChains.length > 0,
   };
 }
 
@@ -104,6 +123,9 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
     case 'grouped/change':
       return { ...state, grouped: action.payload };
 
+    case 'merge/change':
+      return { ...state, merge: action.payload };
+
     case 'generate':
       return state.mode === 'single' ? generateSingle(state) : generatePairs(state);
 
@@ -115,6 +137,12 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
 
     case 'conflictPanel/close':
       return { ...state, conflictPanelOpen: false };
+
+    case 'cyclePanel/close':
+      return { ...state, cyclePanelOpen: false };
+
+    case 'chainsPanel/close':
+      return { ...state, chainsPanelOpen: false };
 
     case 'reset':
       return initialState;

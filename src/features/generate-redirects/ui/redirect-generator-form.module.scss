@@ -25,6 +25,23 @@
   color: var(--color-accent);
 }
 
+.uploadRow {
+  display: flex;
+}
+
+.helpSnippet {
+  display: block;
+  overflow-wrap: break-word;
+  font-family: tokens.$font-mono;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: tokens.radius('sm');
+  padding: tokens.spacing(2);
+  margin-top: tokens.spacing(2);
+
+  @include tokens.type('xs');
+}
+
 .buttons {
   display: flex;
   flex-wrap: wrap;

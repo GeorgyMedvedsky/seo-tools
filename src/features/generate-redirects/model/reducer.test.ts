@@ -129,6 +129,39 @@ describe('generatorReducer', () => {
     expect(state.grouped).toBe(true);
   });
 
+  it('defaults to merge enabled and lets it be toggled off', () => {
+    expect(initialState.merge).toBe(true);
+    const state = generatorReducer(initialState, { type: 'merge/change', payload: false });
+    expect(state.merge).toBe(false);
+  });
+
+  it('passes the merge flag through to generateRedirects', () => {
+    const state = generatorReducer(
+      {
+        ...initialState,
+        urlsInput: 'https://example.com/a\nhttps://example.com/b',
+        targetUrl: 'https://example.com/target',
+        merge: false,
+      },
+      { type: 'generate' },
+    );
+    expect(state.output.match(/location/g)).toHaveLength(2);
+  });
+
+  it('passes the merge flag through to generateRedirectPairs', () => {
+    const state = generatorReducer(
+      {
+        ...initialState,
+        mode: 'pairs',
+        pairsInput:
+          'https://old.com/a к https://new.com/shared\nhttps://old.com/b к https://new.com/shared',
+        merge: false,
+      },
+      { type: 'generate' },
+    );
+    expect(state.output.match(/location/g)).toHaveLength(2);
+  });
+
   it('closes only the error panel, leaving the warning panel untouched', () => {
     const generated = generatorReducer(
       withTarget('https://example.com/target', 'https://other.com/a\nnot a url'),
@@ -201,6 +234,57 @@ describe('generatorReducer', () => {
       const closed = generatorReducer(generated, { type: 'conflictPanel/close' });
       expect(closed.conflictPanelOpen).toBe(false);
       expect(closed.conflictingSources).toEqual(['/a']);
+    });
+
+    it('opens the chains panel when a redirect chain is collapsed', () => {
+      const state = generatorReducer(
+        {
+          ...initialState,
+          mode: 'pairs',
+          pairsInput: [
+            'https://old.com/a к https://old.com/b',
+            'https://old.com/b к https://new.com/c',
+          ].join('\n'),
+        },
+        { type: 'generate' },
+      );
+      expect(state.chainsPanelOpen).toBe(true);
+      expect(state.collapsedChains).toEqual(['/a']);
+      expect(state.cyclePanelOpen).toBe(false);
+    });
+
+    it('opens the cycle panel and excludes every path in a redirect cycle', () => {
+      const state = generatorReducer(
+        {
+          ...initialState,
+          mode: 'pairs',
+          pairsInput: [
+            'https://old.com/a к https://old.com/b',
+            'https://old.com/b к https://old.com/a',
+          ].join('\n'),
+        },
+        { type: 'generate' },
+      );
+      expect(state.cyclePanelOpen).toBe(true);
+      expect(state.redirectCycles.sort()).toEqual(['/a', '/b']);
+      expect(state.nothingToRedirect).toBe(true);
+    });
+
+    it('closing the cycle and chains panels only affects that panel', () => {
+      const generated = generatorReducer(
+        {
+          ...initialState,
+          mode: 'pairs',
+          pairsInput: [
+            'https://old.com/a к https://old.com/b',
+            'https://old.com/b к https://new.com/c',
+          ].join('\n'),
+        },
+        { type: 'generate' },
+      );
+      const closed = generatorReducer(generated, { type: 'chainsPanel/close' });
+      expect(closed.chainsPanelOpen).toBe(false);
+      expect(closed.collapsedChains).toEqual(['/a']);
     });
 
     it('updates pairsInput and clears nothingToRedirect', () => {

@@ -1,10 +1,15 @@
 import { Copy, Download, RotateCcw, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getDownloadFilename } from 'entities/redirect';
 import { Button } from 'shared/ui/button';
 import { TextArea } from 'shared/ui/text-area';
 import { TextField } from 'shared/ui/text-field';
 import { OutputField } from 'shared/ui/output-field';
 import { NoticePanel } from 'shared/ui/notice-panel';
+import { FileUploadButton } from 'shared/ui/file-upload-button';
+import { InfoPopover } from 'shared/ui/info-popover';
+
+const UPLOAD_ACCEPT = '.csv,.txt,text/csv,text/plain';
 import type { GenerateRedirectsController } from '../model/use-generate-redirects';
 import styles from './redirect-generator-form.module.scss';
 
@@ -52,6 +57,15 @@ export function RedirectGeneratorForm({ generator }: RedirectGeneratorFormProps)
             onChange={(event) => actions.setUrlsInput(event.target.value)}
           />
 
+          <div className={styles.uploadRow}>
+            <FileUploadButton
+              label={t('redirectGeneratorForm.uploadFile')}
+              accept={UPLOAD_ACCEPT}
+              onFileText={actions.setUrlsInput}
+              onError={actions.notifyUploadFailed}
+            />
+          </div>
+
           <TextField
             id="targetUrl"
             label={t('redirectGeneratorForm.targetUrlLabel')}
@@ -61,14 +75,25 @@ export function RedirectGeneratorForm({ generator }: RedirectGeneratorFormProps)
           />
         </>
       ) : (
-        <TextArea
-          id="inputPairs"
-          label={t('redirectGeneratorForm.inputPairsLabel')}
-          rows={10}
-          placeholder={t('redirectGeneratorForm.inputPairsPlaceholder')}
-          value={state.pairsInput}
-          onChange={(event) => actions.setPairsInput(event.target.value)}
-        />
+        <>
+          <TextArea
+            id="inputPairs"
+            label={t('redirectGeneratorForm.inputPairsLabel')}
+            rows={10}
+            placeholder={t('redirectGeneratorForm.inputPairsPlaceholder')}
+            value={state.pairsInput}
+            onChange={(event) => actions.setPairsInput(event.target.value)}
+          />
+
+          <div className={styles.uploadRow}>
+            <FileUploadButton
+              label={t('redirectGeneratorForm.uploadFile')}
+              accept={UPLOAD_ACCEPT}
+              onFileText={actions.setPairsInput}
+              onError={actions.notifyUploadFailed}
+            />
+          </div>
+        </>
       )}
 
       <div className={styles.buttons}>
@@ -82,7 +107,7 @@ export function RedirectGeneratorForm({ generator }: RedirectGeneratorFormProps)
         </Button>
         <Button variant="secondary" onClick={actions.downloadOutput} disabled={!hasOutput}>
           <Download size={16} aria-hidden="true" />
-          {t('redirectGeneratorForm.download')}
+          {t('redirectGeneratorForm.download', { filename: getDownloadFilename(state.template) })}
         </Button>
         <Button variant="ghost" onClick={actions.reset}>
           <RotateCcw size={16} aria-hidden="true" />
@@ -106,6 +131,29 @@ export function RedirectGeneratorForm({ generator }: RedirectGeneratorFormProps)
         id="output"
         label={t('redirectGeneratorForm.resultLabel')}
         value={state.output}
+        labelExtra={
+          <InfoPopover label={t('redirectGeneratorForm.outputHelp.triggerLabel')}>
+            {state.template === 'nginx' ? (
+              <>
+                <p>{t('redirectGeneratorForm.outputHelp.nginx.intro')}</p>
+                <code className={styles.helpSnippet}>
+                  {t('redirectGeneratorForm.outputHelp.nginx.snippet', {
+                    filename: getDownloadFilename(state.template),
+                  })}
+                </code>
+              </>
+            ) : (
+              <>
+                <p>
+                  {t('redirectGeneratorForm.outputHelp.apache.intro', {
+                    filename: getDownloadFilename(state.template),
+                  })}
+                </p>
+                <p>{t('redirectGeneratorForm.outputHelp.apache.note')}</p>
+              </>
+            )}
+          </InfoPopover>
+        }
       />
 
       <div className={styles.notices}>
@@ -132,6 +180,22 @@ export function RedirectGeneratorForm({ generator }: RedirectGeneratorFormProps)
           items={state.conflictingSources}
           closeLabel={t('redirectGeneratorForm.closeConflict')}
           onClose={actions.closeConflictPanel}
+        />
+        <NoticePanel
+          open={state.cyclePanelOpen}
+          variant="error"
+          title={t('redirectGeneratorForm.redirectCyclesNoticeTitle')}
+          items={state.redirectCycles}
+          closeLabel={t('redirectGeneratorForm.closeCycle')}
+          onClose={actions.closeCyclePanel}
+        />
+        <NoticePanel
+          open={state.chainsPanelOpen}
+          variant="warning"
+          title={t('redirectGeneratorForm.collapsedChainsNoticeTitle')}
+          items={state.collapsedChains}
+          closeLabel={t('redirectGeneratorForm.closeChains')}
+          onClose={actions.closeChainsPanel}
         />
       </div>
     </section>

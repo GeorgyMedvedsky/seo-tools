@@ -12,6 +12,10 @@
     "redirectGeneratorCard": {
       "title": "Redirect Generator",
       "description": "Generate nginx/Apache redirect rules from a list of URLs."
+    },
+    "comingSoon": {
+      "title": "More tools coming soon",
+      "description": "New SEO tools will appear here as the collection grows."
     }
   },
   "notFoundPage": {
@@ -31,12 +35,24 @@
     "title": "Redirects Generator",
     "inputUrlsLabel": "Enter addresses, one per line",
     "inputUrlsPlaceholder": "Enter addresses, one per line...",
+    "uploadFile": "Upload file",
     "targetUrlLabel": "Enter the target URL:",
     "generate": "Generate redirects",
     "copy": "Copy",
-    "download": "Download redirects.conf",
+    "download": "Download {{filename}}",
     "reset": "Reset all",
     "resultLabel": "Result:",
+    "outputHelp": {
+      "triggerLabel": "How to use this file",
+      "nginx": {
+        "intro": "Include this file inside the relevant server block of your nginx config:",
+        "snippet": "include /path/to/{{filename}};"
+      },
+      "apache": {
+        "intro": "Place this file as {{filename}} in your site's document root — Apache picks it up automatically.",
+        "note": "Make sure AllowOverride is not set to None for the relevant directives in your main config."
+      }
+    },
     "nothingToRedirect": "Nothing to redirect: the URL list is empty or every URL was filtered out",
     "targetUrlErrors": {
       "required": "Please enter the target url",
@@ -49,11 +65,16 @@
     "inputPairsLabel": "Enter source and target URL pairs, one pair per line",
     "inputPairsPlaceholder": "https://old-site.com/page https://new-site.com/page",
     "conflictingSourcesNoticeTitle": "These source URLs are mapped to more than one target:",
-    "closeConflict": "Close conflict"
+    "closeConflict": "Close conflict",
+    "redirectCyclesNoticeTitle": "These source URLs form a redirect cycle and were excluded:",
+    "closeCycle": "Close cycle notice",
+    "collapsedChainsNoticeTitle": "These redirects pointed to another redirect in the list; the extra hop was skipped:",
+    "closeChains": "Close chains notice"
   },
   "generateRedirects": {
     "copied": "Copied!",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "uploadFailed": "Failed to read file"
   },
   "generatorSettings": {
     "modeLabel": "Redirect mode:",
@@ -62,6 +83,8 @@
     "templateLabel": "Select a template:",
     "groupLabel": "Group",
     "groupTitle": "Grouping is done by the first path segment",
+    "mergeLabel": "Merge rules with the same target",
+    "mergeTitle": "When enabled, rules that redirect to the same target are combined into one rule instead of one per path",
     "checkRedirectList": "Check redirect list"
   }
 }

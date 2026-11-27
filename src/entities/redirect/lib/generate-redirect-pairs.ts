@@ -1,9 +1,11 @@
 import type { RedirectTemplate } from '../model/types';
 import {
   apacheRedirectMatch,
-  formatPathForRegex,
+  exactPathPattern,
   hasUnsafeConfigCharacters,
-  patternForPaths,
+  normalizeHost,
+  normalizePath,
+  patternsForMerge,
   safeDecodeURIComponent,
   targetHasOwnQuery,
 } from './path-format';
@@ -13,6 +15,7 @@ export type RedirectPair = { source: string; target: string };
 export type GenerateRedirectPairsParams = {
   lines: string[];
   template: RedirectTemplate;
+  merge: boolean;
 };
 
 export type GenerateRedirectPairsResult = {
@@ -20,6 +23,8 @@ export type GenerateRedirectPairsResult = {
   output: string;
   unparseableLines: string[];
   conflictingSources: string[];
+  redirectCycles: string[];
+  collapsedChains: string[];
   hasRedirects: boolean;
 };
 
@@ -52,13 +57,46 @@ function apacheRewriteRuleWithQuery(pattern: string, target: string): string {
   return `RewriteRule "^${pattern}$" "${target}" [R=301,L,QSD,NC]`;
 }
 
+type ChainResolution = { target: string; collapsed: boolean } | { cycle: true };
+
+function resolveChainTarget(
+  startPath: string,
+  targetByPath: Map<string, string>,
+  sourceHosts: Set<string>,
+): ChainResolution {
+  const visited = new Set<string>([startPath]);
+  let target = targetByPath.get(startPath) as string;
+  let collapsed = false;
+
+  while (true) {
+    let targetUrl: URL;
+    try {
+      targetUrl = new URL(target);
+    } catch {
+      return { target, collapsed };
+    }
+
+    if (!sourceHosts.has(normalizeHost(targetUrl.hostname))) return { target, collapsed };
+
+    const nextPath = normalizePath(safeDecodeURIComponent(targetUrl.pathname));
+    if (!targetByPath.has(nextPath)) return { target, collapsed };
+    if (visited.has(nextPath)) return { cycle: true };
+
+    visited.add(nextPath);
+    target = targetByPath.get(nextPath) as string;
+    collapsed = true;
+  }
+}
+
 export function generateRedirectPairs({
   lines,
   template,
+  merge,
 }: GenerateRedirectPairsParams): GenerateRedirectPairsResult {
   const unparseableLines: string[] = [];
   const conflictingSources = new Set<string>();
   const targetByPath = new Map<string, string>();
+  const sourceHosts = new Set<string>();
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -74,11 +112,14 @@ export function generateRedirectPairs({
     const target = pair.target.trim();
     if (source === target) continue;
 
-    const path = safeDecodeURIComponent(new URL(source).pathname);
+    const sourceUrl = new URL(source);
+    const path = normalizePath(safeDecodeURIComponent(sourceUrl.pathname));
     if (hasUnsafeConfigCharacters(path)) {
       unparseableLines.push(line);
       continue;
     }
+
+    sourceHosts.add(normalizeHost(sourceUrl.hostname));
 
     const existingTarget = targetByPath.get(path);
 
@@ -89,11 +130,29 @@ export function generateRedirectPairs({
     }
   }
 
-  const paths = [...targetByPath.keys()].filter((path) => !conflictingSources.has(path));
+  const cleanTargetByPath = new Map(
+    [...targetByPath].filter(([path]) => !conflictingSources.has(path)),
+  );
+
+  const redirectCycles = new Set<string>();
+  const collapsedChains: string[] = [];
+  const resolvedTargetByPath = new Map<string, string>();
+
+  for (const path of cleanTargetByPath.keys()) {
+    const resolution = resolveChainTarget(path, cleanTargetByPath, sourceHosts);
+    if ('cycle' in resolution) {
+      redirectCycles.add(path);
+      continue;
+    }
+
+    resolvedTargetByPath.set(path, resolution.target);
+    if (resolution.collapsed) {
+      collapsedChains.push(path);
+    }
+  }
 
   const pathsByTarget = new Map<string, string[]>();
-  for (const path of paths) {
-    const target = targetByPath.get(path) ?? '';
+  for (const [path, target] of resolvedTargetByPath) {
     const existing = pathsByTarget.get(target);
     if (existing) {
       existing.push(path);
@@ -102,16 +161,21 @@ export function generateRedirectPairs({
     }
   }
 
-  const rules = [...pathsByTarget.entries()].map(([target, groupedPaths]) => {
-    const pattern = patternForPaths(groupedPaths.map((path) => formatPathForRegex(path)));
+  const rules = [...pathsByTarget.entries()].flatMap(([target, groupedPaths]) => {
+    const patterns = patternsForMerge(
+      groupedPaths.map((path) => exactPathPattern(path)),
+      merge,
+    );
 
-    if (template === 'nginx') {
-      return nginxLocationBlock(pattern, target);
-    }
+    return patterns.map((pattern) => {
+      if (template === 'nginx') {
+        return nginxLocationBlock(pattern, target);
+      }
 
-    return targetHasOwnQuery(target)
-      ? apacheRewriteRuleWithQuery(pattern, target)
-      : apacheRedirectMatch(pattern, target);
+      return targetHasOwnQuery(target)
+        ? apacheRewriteRuleWithQuery(pattern, target)
+        : apacheRedirectMatch(pattern, target);
+    });
   });
 
   return {
@@ -119,6 +183,8 @@ export function generateRedirectPairs({
     output: rules.join('\n'),
     unparseableLines,
     conflictingSources: [...conflictingSources],
+    redirectCycles: [...redirectCycles],
+    collapsedChains,
     hasRedirects: rules.length > 0,
   };
 }

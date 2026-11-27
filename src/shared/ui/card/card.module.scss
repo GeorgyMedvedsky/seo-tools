@@ -23,6 +23,18 @@
   }
 }
 
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: tokens.spacing(4);
+  border-radius: tokens.radius('md');
+  background: var(--color-bg-canvas);
+  color: var(--color-accent);
+}
+
 .title {
   font-family: tokens.$font-sans;
   font-weight: tokens.$font-weight-semibold;

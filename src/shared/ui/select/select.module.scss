@@ -1,13 +1,23 @@
 @use 'app/styles/mixins' as *;
 @use 'app/styles/tokens' as tokens;
 
-.label {
+.root {
   @include label-row;
 
+  position: relative;
   margin-top: tokens.spacing(3);
 }
 
-.select {
+.label {
+  font-family: tokens.$font-sans;
+  color: var(--color-text-primary);
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.spacing(2);
   font-family: tokens.$font-sans;
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
@@ -28,4 +38,59 @@
   &:focus-visible {
     @include focus-ring;
   }
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+
+  @include tokens.transition(transform);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.listbox {
+  @include surface('raised');
+  @include tokens.transition(opacity, transform);
+
+  position: absolute;
+  top: calc(100% + #{tokens.spacing(1)});
+  right: 0;
+  z-index: tokens.z('side-panel');
+  min-width: 100%;
+  max-width: min(320px, 90vw);
+  margin: 0;
+  padding: tokens.spacing(1);
+  list-style: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+}
+
+.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.option {
+  padding: tokens.spacing(2) tokens.spacing(3);
+  border-radius: tokens.radius('sm');
+  color: var(--color-text-primary);
+  cursor: pointer;
+
+  @include tokens.type('base');
+  @include tokens.transition(background-color);
+
+  @include hover-supported {
+    &:hover {
+      background: var(--color-bg-canvas);
+    }
+  }
+}
+
+.active {
+  background: var(--color-bg-canvas);
 }

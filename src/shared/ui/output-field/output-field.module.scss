@@ -9,6 +9,12 @@
   gap: tokens.spacing(2);
 }
 
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: tokens.spacing(2);
+}
+
 .label {
   font-family: tokens.$font-sans;
   font-weight: tokens.$font-weight-semibold;

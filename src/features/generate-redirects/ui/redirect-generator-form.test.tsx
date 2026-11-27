@@ -44,6 +44,18 @@ describe('RedirectGeneratorForm', () => {
     expect(screen.getByLabelText('Enter the target URL:')).toBeInstanceOf(HTMLInputElement);
   });
 
+  it('shows nginx-specific instructions for including the output file by default', async () => {
+    const user = userEvent.setup();
+    render(<TestHarness />);
+
+    await user.click(screen.getByRole('button', { name: 'How to use this file' }));
+
+    expect(
+      screen.getByText('Include this file inside the relevant server block of your nginx config:'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('include /path/to/redirects.conf;')).toBeInTheDocument();
+  });
+
   it('shows a distinct message for an empty target URL, generates nothing', async () => {
     const user = userEvent.setup();
     render(<TestHarness />);
@@ -87,7 +99,7 @@ describe('RedirectGeneratorForm', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Generate redirects' }));
 
-    expect(screen.getByText(/location ~\* \^\/old-page\$/)).toBeInTheDocument();
+    expect(screen.getByText(/location ~\* \^\/old-page\/\?\$/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Copy' }));
 
@@ -103,6 +115,32 @@ describe('RedirectGeneratorForm', () => {
     await user.click(screen.getByRole('button', { name: 'Reset all' }));
 
     expect(screen.getByLabelText('Enter the target URL:')).toHaveValue('');
+  });
+
+  it('fills the URL list from an uploaded file', async () => {
+    const user = userEvent.setup();
+    render(<TestHarness />);
+
+    const file = new File(['https://example.com/old-page\n'], 'list.csv', { type: 'text/csv' });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, file);
+
+    expect(screen.getByLabelText('Enter addresses, one per line')).toHaveValue(
+      'https://example.com/old-page\n',
+    );
+  });
+
+  it('shows a notification instead of staying silent when the uploaded file fails to read', async () => {
+    const user = userEvent.setup();
+    render(<TestHarness />);
+
+    const file = new File(['content'], 'list.csv', { type: 'text/csv' });
+    vi.spyOn(file, 'text').mockRejectedValue(new Error('read failed'));
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, file);
+
+    expect(await screen.findByText('Failed to read file')).toBeInTheDocument();
   });
 
   it('downloads the generated output as redirects.conf', async () => {

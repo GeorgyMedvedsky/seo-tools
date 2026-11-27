@@ -82,7 +82,7 @@
   font-weight: tokens.$font-weight-semibold;
   margin: 0;
 
-  @include tokens.type('sm');
+  @include tokens.type('base');
 }
 
 .item {
@@ -91,5 +91,5 @@
   margin: 0 0 tokens.spacing(1);
   color: var(--color-text-secondary);
 
-  @include tokens.type('xs');
+  @include tokens.type('sm');
 }

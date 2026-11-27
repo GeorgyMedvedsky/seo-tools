@@ -1,3 +1,4 @@
+import { Sparkles, Waypoints } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from 'widgets/app-header';
 import { Card } from 'shared/ui/card';
@@ -16,9 +17,19 @@ export function DashboardPage() {
         <div className={styles.cards}>
           <Card
             to={ROUTES.redirectGenerator}
+            icon={<Waypoints size={20} aria-hidden="true" />}
             title={t('dashboardPage.redirectGeneratorCard.title')}
             description={t('dashboardPage.redirectGeneratorCard.description')}
           />
+          <div className={styles.comingSoon}>
+            <div className={styles.comingSoonIcon}>
+              <Sparkles size={20} aria-hidden="true" />
+            </div>
+            <h2 className={styles.comingSoonTitle}>{t('dashboardPage.comingSoon.title')}</h2>
+            <p className={styles.comingSoonDescription}>
+              {t('dashboardPage.comingSoon.description')}
+            </p>
+          </div>
         </div>
       </main>
     </div>

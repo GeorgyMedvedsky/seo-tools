@@ -9,6 +9,7 @@ describe('generateRedirects', () => {
       urls: ['not a url', 'https://example.com/foo'],
       targetUrl: 'not-a-valid-url',
       template: 'nginx',
+      merge: true,
       grouped: false,
     });
     expect(result).toEqual({ ok: false, error: 'invalid-target-url' });
@@ -20,13 +21,14 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/old-page'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result).toEqual({
         ok: true,
         output:
           'set $target_url_ https://example.com/target;\n\n' +
-          'location ~* ^/old-page$ {\n  return 301 $target_url_;\n}',
+          'location ~* ^/old-page/?$ {\n  return 301 $target_url_;\n}',
         subdomains: [],
         unparseableUrls: [],
         hasRedirects: true,
@@ -40,6 +42,7 @@ describe('generateRedirects', () => {
           urls: [`https://example.com${path}`],
           targetUrl,
           template: 'nginx',
+          merge: true,
           grouped: false,
         });
         expect(result.ok && result.output).toBe('set $target_url_ https://example.com/target;\n\n');
@@ -47,11 +50,35 @@ describe('generateRedirects', () => {
       },
     );
 
+    it('also excludes a trailing-slash variant of an excluded path (bug fix: normalization applies before the exclusion check)', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/index.php/'],
+        targetUrl,
+        template: 'nginx',
+        merge: true,
+        grouped: false,
+      });
+      expect(result.ok && result.output).toBe('set $target_url_ https://example.com/target;\n\n');
+      expect(result.ok && result.hasRedirects).toBe(false);
+    });
+
     it('skips a URL whose path already equals the canonical path', () => {
       const result = generateRedirects({
         urls: ['https://example.com/target'],
         targetUrl,
         template: 'nginx',
+        merge: true,
+        grouped: false,
+      });
+      expect(result.ok && result.output).toBe('set $target_url_ https://example.com/target;\n\n');
+    });
+
+    it('skips a URL whose path equals the canonical path only up to a trailing slash', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/target/'],
+        targetUrl,
+        template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok && result.output).toBe('set $target_url_ https://example.com/target;\n\n');
@@ -62,9 +89,10 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/a.b[c]d'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
-      expect(result.ok && result.output).toContain('^/a\\.b\\[c\\]d$');
+      expect(result.ok && result.output).toContain('^/a\\.b\\[c\\]d/?$');
     });
 
     it('replaces spaces in the path with \\s', () => {
@@ -72,9 +100,10 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/old%20page'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
-      expect(result.ok && result.output).toContain('^/old\\spage$');
+      expect(result.ok && result.output).toContain('^/old\\spage/?$');
     });
 
     it('does not throw on a path with a percent-sequence that is not valid UTF-8 (bug fix: decodeURIComponent falls back to the raw path)', () => {
@@ -82,11 +111,12 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/%ff%fe'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.output).toContain('^/%ff%fe$');
+      expect(result.output).toContain('^/%ff%fe/?$');
     });
 
     it('skips blank lines in the input', () => {
@@ -94,10 +124,28 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/a', '', '   ', 'https://example.com/b'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
       expect(result.ok && result.unparseableUrls).toEqual([]);
+    });
+  });
+
+  describe('trailing slash normalization', () => {
+    it('treats /page and /page/ as the same path, deduplicating into a single rule', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/a', 'https://example.com/a/'],
+        targetUrl,
+        template: 'nginx',
+        merge: true,
+        grouped: false,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const ruleCount = result.output.match(/location/g)?.length ?? 0;
+      expect(ruleCount).toBe(1);
+      expect(result.output).toContain('location ~* ^/a/?$ {\n  return 301 $target_url_;\n}');
     });
   });
 
@@ -107,6 +155,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/a/b', 'https://example.com/a/b'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       const ruleCount = (result.ok ? result.output.match(/location/g) : [])?.length ?? 0;
@@ -118,11 +167,14 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/a', 'https://example.com/b', 'https://example.com/c'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.output).toContain('location ~* ^(/a|/b|/c)$ {\n  return 301 $target_url_;\n}');
+      expect(result.output).toContain(
+        'location ~* ^(/a/?|/b/?|/c/?)$ {\n  return 301 $target_url_;\n}',
+      );
     });
 
     it('groups by the first path segment specifically, not deeper ones (bug fix: keeps the leading "/")', () => {
@@ -130,6 +182,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/a/b/c', 'https://example.com/a/b/d', 'https://example.com/a/x'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: true,
       });
       expect(result.ok).toBe(true);
@@ -140,12 +193,66 @@ describe('generateRedirects', () => {
     });
   });
 
+  describe('merge toggle', () => {
+    it('generates a separate nginx location block per path when merge is disabled', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/a', 'https://example.com/b'],
+        targetUrl,
+        template: 'nginx',
+        merge: false,
+        grouped: false,
+      });
+      expect(result.ok && result.output).toBe(
+        'set $target_url_ https://example.com/target;\n\n' +
+          'location ~* ^/a/?$ {\n  return 301 $target_url_;\n}\n' +
+          'location ~* ^/b/?$ {\n  return 301 $target_url_;\n}',
+      );
+    });
+
+    it('generates a separate apache RedirectMatch per path when merge is disabled (target without its own query)', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/a', 'https://example.com/b'],
+        targetUrl,
+        template: 'apache',
+        merge: false,
+        grouped: false,
+      });
+      expect(result.ok && result.output).toBe(
+        'RedirectMatch 301 "(?i)^/a/?$" "https://example.com/target"\n' +
+          'RedirectMatch 301 "(?i)^/b/?$" "https://example.com/target"',
+      );
+    });
+
+    it('does not change the apache RewriteCond-chain branch when the target has its own query (merge is not applicable there)', () => {
+      const targetWithQuery = 'https://example.com/target?utm=1';
+      const withMerge = generateRedirects({
+        urls: ['https://example.com/a', 'https://example.com/b'],
+        targetUrl: targetWithQuery,
+        template: 'apache',
+        merge: true,
+        grouped: false,
+      });
+      const withoutMerge = generateRedirects({
+        urls: ['https://example.com/a', 'https://example.com/b'],
+        targetUrl: targetWithQuery,
+        template: 'apache',
+        merge: false,
+        grouped: false,
+      });
+      expect(withMerge.ok && withMerge.output).toBe(withoutMerge.ok && withoutMerge.output);
+      expect(withMerge.ok && withMerge.output).toContain(
+        'RewriteCond %{REQUEST_URI} ^/a/?$ [NC,OR]',
+      );
+    });
+  });
+
   describe('subdomain detection', () => {
     it('flags a different host as a subdomain', () => {
       const result = generateRedirects({
         urls: ['https://other.com/page'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok && result.subdomains).toEqual(['other.com']);
@@ -156,6 +263,7 @@ describe('generateRedirects', () => {
         urls: ['https://www.example.com/page'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok && result.subdomains).toEqual([]);
@@ -166,6 +274,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/page'],
         targetUrl: 'https://www.example.com/target',
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok && result.subdomains).toEqual([]);
@@ -176,6 +285,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com:8443/page'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok && result.subdomains).toEqual([]);
@@ -188,6 +298,7 @@ describe('generateRedirects', () => {
         urls: ['not a url', 'https://example.com/valid'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -203,6 +314,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/a'],
         targetUrl: 'https://example.com/target;return 301 https://evil.com;',
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result).toEqual({ ok: false, error: 'invalid-target-url' });
@@ -213,6 +325,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/a'],
         targetUrl: 'https://example.com/target" Require all granted #',
         template: 'apache',
+        merge: true,
         grouped: false,
       });
       expect(result).toEqual({ ok: false, error: 'invalid-target-url' });
@@ -223,6 +336,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/old;return 301 https://evil.com'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -238,6 +352,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/old%3Breturn%20301%20https://evil.com'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -251,6 +366,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/old%22page'],
         targetUrl,
         template: 'apache',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -264,6 +380,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/page?utm%3Breturn=1'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -277,6 +394,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/page?utm=a%22b'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -292,6 +410,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/page?utm_source=a&utm_medium=b'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -305,6 +424,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/a?utm_source=x', 'https://example.com/b?utm_source=x'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -318,6 +438,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/page?q=a%2Fb'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -330,6 +451,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/page?q=plain'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -342,6 +464,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/page?q=plain'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -354,6 +477,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/page?q=foo/bar'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -366,6 +490,7 @@ describe('generateRedirects', () => {
         urls: ['https://example.com/some-page?utm_source=a'],
         targetUrl,
         template: 'nginx',
+        merge: true,
         grouped: false,
       });
       expect(result.ok).toBe(true);
@@ -382,11 +507,12 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/a', 'https://example.com/b'],
           targetUrl,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
         if (!result.ok) return;
-        expect(result.output).toBe(`RedirectMatch 301 "(?i)^(/a|/b)$" "${targetUrl}"`);
+        expect(result.output).toBe(`RedirectMatch 301 "(?i)^(/a/?|/b/?)$" "${targetUrl}"`);
       });
 
       it('anchors grouped rules with the leading "/" too (bug fix carried over from RewriteCond-based grouping)', () => {
@@ -394,6 +520,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/a/b', 'https://example.com/a/c'],
           targetUrl,
           template: 'apache',
+          merge: true,
           grouped: true,
         });
         expect(result.ok).toBe(true);
@@ -406,6 +533,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/', 'https://example.com/robots.txt'],
           targetUrl,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
@@ -423,6 +551,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/a', 'https://example.com/b'],
           targetUrl: targetWithQuery,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
@@ -440,6 +569,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/a'],
           targetUrl: targetWithQuery,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
@@ -454,6 +584,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/a'],
           targetUrl: targetWithQuery,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
@@ -468,6 +599,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/a/b', 'https://example.com/a/c'],
           targetUrl: targetWithQuery,
           template: 'apache',
+          merge: true,
           grouped: true,
         });
         expect(result.ok).toBe(true);
@@ -480,6 +612,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/', 'https://example.com/robots.txt'],
           targetUrl: targetWithQuery,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
@@ -495,6 +628,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/page?utm_source=a'],
           targetUrl,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
@@ -509,6 +643,7 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/page?q=a%2Fb'],
           targetUrl,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
@@ -521,13 +656,14 @@ describe('generateRedirects', () => {
           urls: ['https://example.com/a', 'https://example.com/page?utm_source=x'],
           targetUrl,
           template: 'apache',
+          merge: true,
           grouped: false,
         });
         expect(result.ok).toBe(true);
         if (!result.ok) return;
         expect(result.output).toContain('RewriteCond %{QUERY_STRING}');
         expect(result.output).toContain(`RewriteRule ^(.*)$ ${targetUrl} [R=301,L,QSD]`);
-        expect(result.output).toContain(`RedirectMatch 301 "(?i)^/a$" "${targetUrl}"`);
+        expect(result.output).toContain(`RedirectMatch 301 "(?i)^/a/?$" "${targetUrl}"`);
       });
     });
   });
