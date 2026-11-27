@@ -84,4 +84,40 @@ describe('RedirectGeneratorPage', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
+
+  describe('pairs mode', () => {
+    it('switches the form to a single pairs textarea and hides the grouping checkbox', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole('button', { name: 'Toggle settings panel' }));
+
+      await user.selectOptions(screen.getByLabelText('Redirect mode:'), 'pairs');
+
+      expect(screen.queryByLabelText('Enter the target URL:')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Enter addresses, one per line')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Group')).not.toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Enter source and target URL pairs, one pair per line'),
+      ).toBeInstanceOf(HTMLTextAreaElement);
+    });
+
+    it('generates an independent rule per pair and flags a conflicting source', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole('button', { name: 'Toggle settings panel' }));
+      await user.selectOptions(screen.getByLabelText('Redirect mode:'), 'pairs');
+      await user.click(screen.getByTestId('outside'));
+
+      await user.type(
+        screen.getByLabelText('Enter source and target URL pairs, one pair per line'),
+        'https://old.com/a к https://new.com/one\nhttps://old.com/a к https://new.com/two',
+      );
+      await user.click(screen.getByRole('button', { name: 'Generate redirects' }));
+
+      expect(
+        screen.getByText('These source URLs are mapped to more than one target:'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('/a')).toBeInTheDocument();
+    });
+  });
 });

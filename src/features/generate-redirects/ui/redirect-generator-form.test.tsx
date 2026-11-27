@@ -87,7 +87,7 @@ describe('RedirectGeneratorForm', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Generate redirects' }));
 
-    expect(screen.getByText(/rewrite \(\?i\)\^\/old-page\$/)).toBeInTheDocument();
+    expect(screen.getByText(/location ~\* \^\/old-page\$/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Copy' }));
 

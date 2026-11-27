@@ -15,7 +15,7 @@ describe('generateRedirects', () => {
   });
 
   describe('nginx — path redirects', () => {
-    it('generates a single rewrite rule for one URL', () => {
+    it('generates a single location block for one URL', () => {
       const result = generateRedirects({
         urls: ['https://example.com/old-page'],
         targetUrl,
@@ -25,7 +25,8 @@ describe('generateRedirects', () => {
       expect(result).toEqual({
         ok: true,
         output:
-          'set $target_url_ https://example.com/target;\n\nrewrite (?i)^/old-page$ $target_url_? permanent;',
+          'set $target_url_ https://example.com/target;\n\n' +
+          'location ~* ^/old-page$ {\n  return 301 $target_url_;\n}',
         subdomains: [],
         unparseableUrls: [],
         hasRedirects: true,
@@ -108,8 +109,20 @@ describe('generateRedirects', () => {
         template: 'nginx',
         grouped: false,
       });
-      const ruleCount = (result.ok ? result.output.match(/rewrite/g) : [])?.length ?? 0;
+      const ruleCount = (result.ok ? result.output.match(/location/g) : [])?.length ?? 0;
       expect(ruleCount).toBe(1);
+    });
+
+    it('merges multiple distinct paths into one location block via alternation', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/a', 'https://example.com/b', 'https://example.com/c'],
+        targetUrl,
+        template: 'nginx',
+        grouped: false,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.output).toContain('location ~* ^(/a|/b|/c)$ {\n  return 301 $target_url_;\n}');
     });
 
     it('groups by the first path segment specifically, not deeper ones (bug fix: keeps the leading "/")', () => {
@@ -121,9 +134,9 @@ describe('generateRedirects', () => {
       });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      const ruleCount = result.output.match(/rewrite/g)?.length ?? 0;
+      const ruleCount = result.output.match(/location/g)?.length ?? 0;
       expect(ruleCount).toBe(1);
-      expect(result.output).toContain('rewrite (?i)^/a/(.*)$ $target_url_? permanent;');
+      expect(result.output).toContain('location ~* ^/a/(.*)$ {\n  return 301 $target_url_;\n}');
     });
   });
 
@@ -181,6 +194,95 @@ describe('generateRedirects', () => {
       if (!result.ok) return;
       expect(result.unparseableUrls).toEqual(['not a url']);
       expect(result.output).toContain('/valid');
+    });
+  });
+
+  describe('config injection safety', () => {
+    it('rejects a target URL containing a literal semicolon (nginx statement terminator)', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/a'],
+        targetUrl: 'https://example.com/target;return 301 https://evil.com;',
+        template: 'nginx',
+        grouped: false,
+      });
+      expect(result).toEqual({ ok: false, error: 'invalid-target-url' });
+    });
+
+    it('rejects a target URL containing a literal double quote (Apache quote breakout)', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/a'],
+        targetUrl: 'https://example.com/target" Require all granted #',
+        template: 'apache',
+        grouped: false,
+      });
+      expect(result).toEqual({ ok: false, error: 'invalid-target-url' });
+    });
+
+    it('excludes a path containing a literal semicolon instead of embedding it unescaped', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/old;return 301 https://evil.com'],
+        targetUrl,
+        template: 'nginx',
+        grouped: false,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.unparseableUrls).toEqual([
+        'https://example.com/old;return 301 https://evil.com',
+      ]);
+      expect(result.output).not.toContain('evil.com');
+    });
+
+    it('excludes a path whose percent-encoded semicolon decodes into a raw one (bug: naive pre-decode check would miss this)', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/old%3Breturn%20301%20https://evil.com'],
+        targetUrl,
+        template: 'nginx',
+        grouped: false,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.unparseableUrls).toHaveLength(1);
+      expect(result.output).not.toContain('evil.com');
+    });
+
+    it('excludes a path containing a literal double quote after decoding', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/old%22page'],
+        targetUrl,
+        template: 'apache',
+        grouped: false,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.unparseableUrls).toHaveLength(1);
+      expect(result.output).toBe('');
+    });
+
+    it('excludes a whole URL when a query key decodes into something containing a semicolon, rather than embedding it in the quoted nginx condition', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/page?utm%3Breturn=1'],
+        targetUrl,
+        template: 'nginx',
+        grouped: false,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.unparseableUrls).toEqual(['https://example.com/page?utm%3Breturn=1']);
+      expect(result.output).not.toContain(';return');
+    });
+
+    it('excludes a whole URL when a query value decodes into something containing a double quote', () => {
+      const result = generateRedirects({
+        urls: ['https://example.com/page?utm=a%22b'],
+        targetUrl,
+        template: 'nginx',
+        grouped: false,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.unparseableUrls).toEqual(['https://example.com/page?utm=a%22b']);
+      expect(result.output).not.toContain('a"b');
     });
   });
 
@@ -274,102 +376,159 @@ describe('generateRedirects', () => {
   });
 
   describe('apache', () => {
-    it('chains RewriteCond with [NC,OR] on every rule except the last', () => {
-      const result = generateRedirects({
-        urls: ['https://example.com/a', 'https://example.com/b'],
-        targetUrl,
-        template: 'apache',
-        grouped: false,
+    describe('target without its own query string — uses RedirectMatch (mod_alias)', () => {
+      it('generates a single RedirectMatch rule covering every path, case-insensitive', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/a', 'https://example.com/b'],
+          targetUrl,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.output).toBe(`RedirectMatch 301 "(?i)^(/a|/b)$" "${targetUrl}"`);
       });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      const lines = result.output
-        .trim()
-        .split('\n')
-        .filter((line) => line.startsWith('RewriteCond %{REQUEST_URI}'));
-      expect(lines[0]).toMatch(/\[NC,OR\]$/);
-      expect(lines[lines.length - 1]).toMatch(/\[NC\]$/);
+
+      it('anchors grouped rules with the leading "/" too (bug fix carried over from RewriteCond-based grouping)', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/a/b', 'https://example.com/a/c'],
+          targetUrl,
+          template: 'apache',
+          grouped: true,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.output).toBe(`RedirectMatch 301 "(?i)^/a/(.*)$" "${targetUrl}"`);
+      });
+
+      it('produces no RedirectMatch at all when there is nothing to redirect (bug fix: was an unconditional site-wide redirect)', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/', 'https://example.com/robots.txt'],
+          targetUrl,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.output).toBe('');
+        expect(result.hasRedirects).toBe(false);
+      });
     });
 
-    it('puts the RewriteRule to the target last, after the conditions, discarding the original query string via QSD', () => {
-      const result = generateRedirects({
-        urls: ['https://example.com/a'],
-        targetUrl,
-        template: 'apache',
-        grouped: false,
-      });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.output.trim().endsWith(`RewriteRule ^(.*)$ ${targetUrl} [R=301,L,QSD]`)).toBe(
-        true,
-      );
-    });
+    describe('target with its own query string — stays on RewriteRule + QSD (mod_alias cannot discard the source query)', () => {
+      const targetWithQuery = 'https://example.com/target?utm=1';
 
-    it('keeps the target URL untouched (no ambiguous extra "?") when it already has its own query string', () => {
-      const result = generateRedirects({
-        urls: ['https://example.com/a'],
-        targetUrl: 'https://example.com/target?utm=1',
-        template: 'apache',
-        grouped: false,
-      });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(
-        result.output
+      it('chains RewriteCond with [NC,OR] on every rule except the last', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/a', 'https://example.com/b'],
+          targetUrl: targetWithQuery,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        const lines = result.output
           .trim()
-          .endsWith('RewriteRule ^(.*)$ https://example.com/target?utm=1 [R=301,L,QSD]'),
-      ).toBe(true);
+          .split('\n')
+          .filter((line) => line.startsWith('RewriteCond %{REQUEST_URI}'));
+        expect(lines[0]).toMatch(/\[NC,OR\]$/);
+        expect(lines[lines.length - 1]).toMatch(/\[NC\]$/);
+      });
+
+      it('puts the RewriteRule to the target last, after the conditions, discarding the original query string via QSD', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/a'],
+          targetUrl: targetWithQuery,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(
+          result.output.trim().endsWith(`RewriteRule ^(.*)$ ${targetWithQuery} [R=301,L,QSD]`),
+        ).toBe(true);
+      });
+
+      it('keeps the target URL untouched (no ambiguous extra "?") when it already has its own query string', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/a'],
+          targetUrl: targetWithQuery,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(
+          result.output.trim().endsWith(`RewriteRule ^(.*)$ ${targetWithQuery} [R=301,L,QSD]`),
+        ).toBe(true);
+      });
+
+      it('anchors grouped rules with the leading "/" too (bug fix)', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/a/b', 'https://example.com/a/c'],
+          targetUrl: targetWithQuery,
+          template: 'apache',
+          grouped: true,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.output).toContain('RewriteCond %{REQUEST_URI} ^/a/(.*)$ [NC]');
+      });
+
+      it('produces no RewriteRule at all when there is nothing to redirect', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/', 'https://example.com/robots.txt'],
+          targetUrl: targetWithQuery,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.output).toBe('');
+        expect(result.hasRedirects).toBe(false);
+      });
     });
 
-    it('produces no RewriteRule at all when there is nothing to redirect (bug fix: was an unconditional site-wide redirect)', () => {
-      const result = generateRedirects({
-        urls: ['https://example.com/', 'https://example.com/robots.txt'],
-        targetUrl,
-        template: 'apache',
-        grouped: false,
+    describe('query-based redirects (always RewriteCond/RewriteRule, regardless of the target)', () => {
+      it('generates a query-string condition, not a path rule, for a URL with query params', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/page?utm_source=a'],
+          targetUrl,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.output).toContain(
+          'RewriteCond %{QUERY_STRING} (^|&)utm_source=a([^&]*)(&|$) [NC,OR]',
+        );
       });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.output).toBe('');
-      expect(result.hasRedirects).toBe(false);
-    });
 
-    it('anchors grouped rules with the leading "/" too (bug fix)', () => {
-      const result = generateRedirects({
-        urls: ['https://example.com/a/b', 'https://example.com/a/c'],
-        targetUrl,
-        template: 'apache',
-        grouped: true,
+      it('falls back to a key-only match when the raw query value is unreliably encoded (bug fix: apache ignored this entirely)', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/page?q=a%2Fb'],
+          targetUrl,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.output).toContain('RewriteCond %{QUERY_STRING} (^|&)q=([^&]*)(&|$) [NC,OR]');
       });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.output).toContain('RewriteCond %{REQUEST_URI} ^/a/(.*)$ [NC]');
-    });
 
-    it('generates a query-string condition, not a path rule, for a URL with query params', () => {
-      const result = generateRedirects({
-        urls: ['https://example.com/page?utm_source=a'],
-        targetUrl,
-        template: 'apache',
-        grouped: false,
+      it('coexists independently with a path-based RedirectMatch when the target has no query of its own', () => {
+        const result = generateRedirects({
+          urls: ['https://example.com/a', 'https://example.com/page?utm_source=x'],
+          targetUrl,
+          template: 'apache',
+          grouped: false,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.output).toContain('RewriteCond %{QUERY_STRING}');
+        expect(result.output).toContain(`RewriteRule ^(.*)$ ${targetUrl} [R=301,L,QSD]`);
+        expect(result.output).toContain(`RedirectMatch 301 "(?i)^/a$" "${targetUrl}"`);
       });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.output).toContain(
-        'RewriteCond %{QUERY_STRING} (^|&)utm_source=a([^&]*)(&|$) [NC,OR]',
-      );
-    });
-
-    it('falls back to a key-only match when the raw query value is unreliably encoded (bug fix: apache ignored this entirely)', () => {
-      const result = generateRedirects({
-        urls: ['https://example.com/page?q=a%2Fb'],
-        targetUrl,
-        template: 'apache',
-        grouped: false,
-      });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.output).toContain('RewriteCond %{QUERY_STRING} (^|&)q=([^&]*)(&|$) [NC,OR]');
     });
   });
 });

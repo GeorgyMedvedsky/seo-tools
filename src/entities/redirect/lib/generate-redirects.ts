@@ -1,25 +1,25 @@
 import { escapeRegExp } from 'shared/lib/utils';
 import { EXCLUDED_PATHS } from '../config/excluded-paths';
 import type { GenerateRedirectsParams, GenerateRedirectsResult } from '../model/types';
+import {
+  apacheRedirectMatch,
+  formatPathForRegex,
+  hasUnsafeConfigCharacters,
+  patternForPaths,
+  safeDecodeURIComponent,
+  targetHasOwnQuery,
+} from './path-format';
 
-function safeDecodeURIComponent(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
+function pathFragment(rawPath: string, isGrouped: boolean): string {
+  return `${formatPathForRegex(rawPath)}${isGrouped ? '/(.*)' : ''}`;
 }
 
-function formatPathForRegex(rawPath: string): string {
-  return escapeRegExp(rawPath).replaceAll(' ', '\\s');
+function nginxLocationBlock(pattern: string): string {
+  return `location ~* ^${pattern}$ {\n  return 301 $target_url_;\n}`;
 }
 
-function nginxTemplate(rawPath: string, isGrouped: boolean): string {
-  return `rewrite (?i)^${formatPathForRegex(rawPath)}${isGrouped ? '/(.*)' : ''}$ $target_url_? permanent;`;
-}
-
-function apacheTemplate(rawPath: string, isLast: boolean, isGrouped: boolean): string {
-  return `RewriteCond %{REQUEST_URI} ^${formatPathForRegex(rawPath)}${isGrouped ? '/(.*)' : ''}$ [NC${isLast ? '' : ',OR'}]`;
+function apacheRewriteCond(rawPath: string, isLast: boolean, isGrouped: boolean): string {
+  return `RewriteCond %{REQUEST_URI} ^${pathFragment(rawPath, isGrouped)}$ [NC${isLast ? '' : ',OR'}]`;
 }
 
 function queryNginxTemplate(key: string, value: string, valueIsUnreliable: boolean): string {
@@ -58,10 +58,16 @@ export function generateRedirects({
   template,
   grouped,
 }: GenerateRedirectsParams): GenerateRedirectsResult {
+  const trimmedTargetUrl = targetUrl.trim();
+
   let canonical: URL;
   try {
-    canonical = new URL(targetUrl.trim());
+    canonical = new URL(trimmedTargetUrl);
   } catch {
+    return { ok: false, error: 'invalid-target-url' };
+  }
+
+  if (hasUnsafeConfigCharacters(trimmedTargetUrl)) {
     return { ok: false, error: 'invalid-target-url' };
   }
 
@@ -91,7 +97,16 @@ export function generateRedirects({
 
     const params = parsedUrl.searchParams;
     if ([...params.keys()].length > 0) {
-      for (const [key, value] of params) {
+      const paramEntries = [...params];
+      const hasUnsafeParam = paramEntries.some(
+        ([key, value]) => hasUnsafeConfigCharacters(key) || hasUnsafeConfigCharacters(value),
+      );
+      if (hasUnsafeParam) {
+        unparseableUrls.push(url);
+        continue;
+      }
+
+      for (const [key, value] of paramEntries) {
         const unreliable = isValueUnreliablyEncoded(parsedUrl, key, value);
         const condition =
           template === 'nginx'
@@ -107,6 +122,10 @@ export function generateRedirects({
     }
 
     const rawPath = safeDecodeURIComponent(parsedUrl.pathname);
+    if (hasUnsafeConfigCharacters(rawPath)) {
+      unparseableUrls.push(url);
+      continue;
+    }
     if (EXCLUDED_PATHS.includes(rawPath)) continue;
     if (rawPath === canonicalPath) continue;
 
@@ -115,19 +134,31 @@ export function generateRedirects({
   }
 
   const paths = [...groupedRedirects];
-  const pathRedirects =
-    template === 'nginx'
-      ? paths.map((path) => nginxTemplate(path, grouped))
-      : paths.map((path, index) => apacheTemplate(path, index === paths.length - 1, grouped));
+  const pattern = () => patternForPaths(paths.map((path) => pathFragment(path, grouped)));
 
-  const trimmedTargetUrl = targetUrl.trim();
-  const hasConditions = queryRedirects !== '' || pathRedirects.length > 0;
-  const output =
-    template === 'nginx'
-      ? `set $target_url_ ${trimmedTargetUrl};\n\n${queryRedirects}${pathRedirects.join('\n')}`
-      : hasConditions
-        ? `${queryRedirects}${pathRedirects.join('\n')}\nRewriteRule ^(.*)$ ${trimmedTargetUrl} [R=301,L,QSD]\n\n`
-        : '';
+  let output: string;
+  let hasConditions: boolean;
+
+  if (template === 'nginx') {
+    const pathBlock = paths.length > 0 ? nginxLocationBlock(pattern()) : '';
+    hasConditions = queryRedirects !== '' || pathBlock !== '';
+    output = `set $target_url_ ${trimmedTargetUrl};\n\n${queryRedirects}${pathBlock}`;
+  } else if (targetHasOwnQuery(trimmedTargetUrl)) {
+    const pathConditions = paths.map((path, index) =>
+      apacheRewriteCond(path, index === paths.length - 1, grouped),
+    );
+    hasConditions = queryRedirects !== '' || pathConditions.length > 0;
+    output = hasConditions
+      ? `${queryRedirects}${pathConditions.join('\n')}\nRewriteRule ^(.*)$ ${trimmedTargetUrl} [R=301,L,QSD]\n\n`
+      : '';
+  } else {
+    const queryBlock = queryRedirects
+      ? `${queryRedirects}RewriteRule ^(.*)$ ${trimmedTargetUrl} [R=301,L,QSD]\n\n`
+      : '';
+    const pathBlock = paths.length > 0 ? apacheRedirectMatch(pattern(), trimmedTargetUrl) : '';
+    hasConditions = queryBlock !== '' || pathBlock !== '';
+    output = `${queryBlock}${pathBlock}`;
+  }
 
   return {
     ok: true,

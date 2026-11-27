@@ -45,13 +45,20 @@
     "subdomainsNoticeTitle": "Список URL содержит поддомены:",
     "closeWarning": "Закрыть предупреждение",
     "unparseableNoticeTitle": "Невозможно обработать следующие URL:",
-    "closeError": "Закрыть ошибку"
+    "closeError": "Закрыть ошибку",
+    "inputPairsLabel": "Введите пары адресов источник-цель, по одной паре на строку",
+    "inputPairsPlaceholder": "https://old-site.com/page https://new-site.com/page",
+    "conflictingSourcesNoticeTitle": "Эти исходные URL указаны с разными целями:",
+    "closeConflict": "Закрыть конфликт"
   },
   "generateRedirects": {
     "copied": "Скопировано!",
     "copyFailed": "Не удалось скопировать"
   },
   "generatorSettings": {
+    "modeLabel": "Режим редиректа:",
+    "modeSingleOption": "Один адрес для всех URL",
+    "modePairsOption": "Свой адрес для каждого URL",
     "templateLabel": "Выберите шаблон:",
     "groupLabel": "Группировать",
     "groupTitle": "Группировка выполняется по первому сегменту пути",

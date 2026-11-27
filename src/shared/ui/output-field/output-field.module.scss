@@ -27,7 +27,7 @@
 .output {
   @include field;
 
-  font-family: tokens.$font-mono;
+  font-family: tokens.$font-sans;
   margin: 0;
   white-space: pre-wrap;
   height: 100%;

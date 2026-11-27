@@ -41,22 +41,35 @@ export function RedirectGeneratorForm({ generator }: RedirectGeneratorFormProps)
     <section className={styles.root}>
       <RedirectGeneratorFormTitle title={t('redirectGeneratorForm.title')} />
 
-      <TextArea
-        id="inputUrls"
-        label={t('redirectGeneratorForm.inputUrlsLabel')}
-        rows={10}
-        placeholder={t('redirectGeneratorForm.inputUrlsPlaceholder')}
-        value={state.urlsInput}
-        onChange={(event) => actions.setUrlsInput(event.target.value)}
-      />
+      {state.mode === 'single' ? (
+        <>
+          <TextArea
+            id="inputUrls"
+            label={t('redirectGeneratorForm.inputUrlsLabel')}
+            rows={10}
+            placeholder={t('redirectGeneratorForm.inputUrlsPlaceholder')}
+            value={state.urlsInput}
+            onChange={(event) => actions.setUrlsInput(event.target.value)}
+          />
 
-      <TextField
-        id="targetUrl"
-        label={t('redirectGeneratorForm.targetUrlLabel')}
-        placeholder="https://example.com/target"
-        value={state.targetUrl}
-        onChange={(event) => actions.setTargetUrl(event.target.value)}
-      />
+          <TextField
+            id="targetUrl"
+            label={t('redirectGeneratorForm.targetUrlLabel')}
+            placeholder="https://example.com/target"
+            value={state.targetUrl}
+            onChange={(event) => actions.setTargetUrl(event.target.value)}
+          />
+        </>
+      ) : (
+        <TextArea
+          id="inputPairs"
+          label={t('redirectGeneratorForm.inputPairsLabel')}
+          rows={10}
+          placeholder={t('redirectGeneratorForm.inputPairsPlaceholder')}
+          value={state.pairsInput}
+          onChange={(event) => actions.setPairsInput(event.target.value)}
+        />
+      )}
 
       <div className={styles.buttons}>
         <Button onClick={actions.generate}>
@@ -111,6 +124,14 @@ export function RedirectGeneratorForm({ generator }: RedirectGeneratorFormProps)
           items={state.unparseableUrls}
           closeLabel={t('redirectGeneratorForm.closeError')}
           onClose={actions.closeErrorPanel}
+        />
+        <NoticePanel
+          open={state.conflictPanelOpen}
+          variant="error"
+          title={t('redirectGeneratorForm.conflictingSourcesNoticeTitle')}
+          items={state.conflictingSources}
+          closeLabel={t('redirectGeneratorForm.closeConflict')}
+          onClose={actions.closeConflictPanel}
         />
       </div>
     </section>

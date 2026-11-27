@@ -45,13 +45,20 @@
     "subdomainsNoticeTitle": "The list of URLs contains subdomains:",
     "closeWarning": "Close warning",
     "unparseableNoticeTitle": "It is not possible to process the following URLs:",
-    "closeError": "Close error"
+    "closeError": "Close error",
+    "inputPairsLabel": "Enter source and target URL pairs, one pair per line",
+    "inputPairsPlaceholder": "https://old-site.com/page https://new-site.com/page",
+    "conflictingSourcesNoticeTitle": "These source URLs are mapped to more than one target:",
+    "closeConflict": "Close conflict"
   },
   "generateRedirects": {
     "copied": "Copied!",
     "copyFailed": "Copy failed"
   },
   "generatorSettings": {
+    "modeLabel": "Redirect mode:",
+    "modeSingleOption": "Same target for all URLs",
+    "modePairsOption": "Individual target per URL",
     "templateLabel": "Select a template:",
     "groupLabel": "Group",
     "groupTitle": "Grouping is done by the first path segment",

@@ -145,4 +145,77 @@ describe('generatorReducer', () => {
     >[1];
     expect(generatorReducer(initialState, unknownAction)).toBe(initialState);
   });
+
+  describe('pairs mode', () => {
+    it('switches mode and clears the previous result', () => {
+      const generated = generatorReducer(
+        withTarget('https://example.com/target', 'https://other.com/a'),
+        { type: 'generate' },
+      );
+      const switched = generatorReducer(generated, { type: 'mode/change', payload: 'pairs' });
+      expect(switched.mode).toBe('pairs');
+      expect(switched.output).toBe('');
+      expect(switched.subdomains).toEqual([]);
+      expect(switched.warningPanelOpen).toBe(false);
+    });
+
+    it('generates output from pairsInput, ignoring targetUrl/urlsInput entirely', () => {
+      const state = generatorReducer(
+        { ...initialState, mode: 'pairs', pairsInput: 'https://old.com/a к https://new.com/b' },
+        { type: 'generate' },
+      );
+      expect(state.targetUrlError).toBeNull();
+      expect(state.output).toContain('https://new.com/b');
+      expect(state.nothingToRedirect).toBe(false);
+    });
+
+    it('opens the error panel for unparseable lines and the conflict panel for conflicting sources', () => {
+      const state = generatorReducer(
+        {
+          ...initialState,
+          mode: 'pairs',
+          pairsInput: [
+            'not a valid line',
+            'https://old.com/a к https://new.com/one',
+            'https://old.com/a к https://new.com/two',
+          ].join('\n'),
+        },
+        { type: 'generate' },
+      );
+      expect(state.errorPanelOpen).toBe(true);
+      expect(state.unparseableUrls).toEqual(['not a valid line']);
+      expect(state.conflictPanelOpen).toBe(true);
+      expect(state.conflictingSources).toEqual(['/a']);
+    });
+
+    it('closing the conflict panel only affects that panel', () => {
+      const generated = generatorReducer(
+        {
+          ...initialState,
+          mode: 'pairs',
+          pairsInput:
+            'https://old.com/a к https://new.com/one\nhttps://old.com/a к https://new.com/two',
+        },
+        { type: 'generate' },
+      );
+      const closed = generatorReducer(generated, { type: 'conflictPanel/close' });
+      expect(closed.conflictPanelOpen).toBe(false);
+      expect(closed.conflictingSources).toEqual(['/a']);
+    });
+
+    it('updates pairsInput and clears nothingToRedirect', () => {
+      const generated = generatorReducer(
+        { ...initialState, mode: 'pairs', pairsInput: '' },
+        { type: 'generate' },
+      );
+      expect(generated.nothingToRedirect).toBe(true);
+
+      const edited = generatorReducer(generated, {
+        type: 'pairsInput/change',
+        payload: 'https://old.com/a к https://new.com/a',
+      });
+      expect(edited.nothingToRedirect).toBe(false);
+      expect(edited.pairsInput).toBe('https://old.com/a к https://new.com/a');
+    });
+  });
 });
