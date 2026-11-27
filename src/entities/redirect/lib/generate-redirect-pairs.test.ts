@@ -176,9 +176,7 @@ describe('generateRedirectPairs', () => {
         template: 'nginx',
       });
       expect(result.conflictingSources).toEqual(['/a']);
-      expect(result.output).toBe(
-        'location ~* ^/b$ {\n  return 301 https://new.com/valid;\n}',
-      );
+      expect(result.output).toBe('location ~* ^/b$ {\n  return 301 https://new.com/valid;\n}');
       expect(result.hasRedirects).toBe(true);
     });
   });
@@ -212,9 +210,7 @@ describe('generateRedirectPairs', () => {
 
     it('treats a line as unparseable when the source path decodes into one containing a semicolon (bug: naive pre-decode check would miss this)', () => {
       const result = generateRedirectPairs({
-        lines: [
-          'https://old.com/a%3Breturn%20301%20https://evil.com к https://new.com/target',
-        ],
+        lines: ['https://old.com/a%3Breturn%20301%20https://evil.com к https://new.com/target'],
         template: 'nginx',
       });
       expect(result.unparseableLines).toHaveLength(1);
